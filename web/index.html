@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sound Sigils - N'Ko Audio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #eee;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #ffd700, #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #888;
+            font-size: 1.1rem;
+        }
+        
+        .sigils-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .sigil-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .sigil-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 215, 0, 0.4);
+            box-shadow: 0 8px 32px rgba(255, 215, 0, 0.15);
+        }
+        
+        .sigil-card.playing {
+            border-color: #ffd700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+        
+        .sigil-char {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .sigil-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            margin-bottom: 0.3rem;
+        }
+        
+        .sigil-desc {
+            color: #aaa;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .sigil-sound-desc {
+            color: #7a7;
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+        
+        .visualizer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ffd700, #ff6b35);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.1s linear;
+        }
+        
+        .sigil-card.playing .visualizer {
+            animation: progress 1.5s linear forwards;
+        }
+        
+        @keyframes progress {
+            from { transform: scaleX(0); }
+            to { transform: scaleX(1); }
+        }
+        
+        .sequence-builder {
+            max-width: 800px;
+            margin: 3rem auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+        
+        .sequence-builder h2 {
+            margin-bottom: 1rem;
+            font-size: 1.3rem;
+        }
+        
+        .sequence-input {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        #sequence {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            font-size: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #fff;
+            text-align: center;
+        }
+        
+        button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            background: linear-gradient(135deg, #ffd700, #ff6b35);
+            border: none;
+            border-radius: 8px;
+            color: #000;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: scale(1.05);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .quick-add {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .quick-add button {
+            font-size: 1.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>ߛ Sound Sigils 🔊</h1>
+        <p class="subtitle">Audio representations of N'Ko sigils that convey meaning through tone</p>
+    </header>
+    
+    <div class="sigils-grid" id="sigils-grid"></div>
+    
+    <div class="sequence-builder">
+        <h2>🎼 Sequence Builder</h2>
+        <div class="sequence-input">
+            <input type="text" id="sequence" placeholder="Click sigils to add..." readonly>
+            <button onclick="playSequence()">▶ Play</button>
+            <button onclick="clearSequence()">Clear</button>
+        </div>
+        <div class="quick-add" id="quick-add"></div>
+    </div>
+    
+    <footer>
+        <p>HEF Instance: inst_20260131082127_609 | Generation: 5</p>
+    </footer>
+    
+    <script>
+        // Sigil definitions with Web Audio synthesis
+        const sigils = [
+            { char: 'ߛ', name: 'stabilization', desc: 'Dispersion decreased', sound: 'Descending tone settling to steady hum', freq: 440, duration: 1.5 },
+            { char: 'ߜ', name: 'dispersion', desc: 'Spread increased', sound: 'Expanding stereo, rising harmonics', freq: 330, duration: 1.5 },
+            { char: 'ߕ', name: 'transition', desc: 'Change point', sound: 'Sharp frequency shift, brief silence', freq: 523, duration: 0.8 },
+            { char: 'ߙ', name: 'return', desc: 'Re-entry to basin', sound: 'Melodic resolution, home note return', freq: 392, duration: 1.2 },
+            { char: 'ߡ', name: 'dwell', desc: 'Sustained stay', sound: 'Long sustained tone, subtle warmth', freq: 349, duration: 2.0 },
+            { char: 'ߚ', name: 'oscillation', desc: 'Rapid alternation', sound: 'Tremolo, rapid frequency modulation', freq: 466, duration: 1.0 },
+            { char: 'ߞ', name: 'recovery', desc: 'Return latency', sound: 'Slow fade-in, gradual stabilization', freq: 294, duration: 1.8 },
+            { char: 'ߣ', name: 'novelty', desc: 'New basin', sound: 'Surprising interval, new timbre', freq: 587, duration: 1.0 },
+            { char: 'ߠ', name: 'place-shift', desc: 'Location change', sound: 'Spatial panning, Doppler effect', freq: 415, duration: 1.3 },
+            { char: 'ߥ', name: 'echo', desc: 'Pattern match', sound: 'Delayed repetition, reverb tail', freq: 370, duration: 2.0 },
+        ];
+        
+        let audioCtx = null;
+        let sequenceChars = [];
+        
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioCtx;
+        }
+        
+        // Sound generators for each sigil
+        const generators = {
+            stabilization: (ctx, freq, dur) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.frequency.setValueAtTime(freq * 1.5, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq, ctx.currentTime + dur);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.5, ctx.currentTime + dur - 0.1);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + dur);
+            },
+            dispersion: (ctx, freq, dur) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const panner = ctx.createStereoPanner();
+                osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 1.3, ctx.currentTime + dur);
+                panner.pan.setValueAtTime(-0.8, ctx.currentTime);
+                panner.pan.linearRampToValueAtTime(0.8, ctx.currentTime + dur);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + dur/2);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+                osc.connect(gain).connect(panner).connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + dur);
+            },
+            transition: (ctx, freq, dur) => {
+                const osc1 = ctx.createOscillator();
+                const osc2 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                const gain2 = ctx.createGain();
+                osc1.frequency.value = freq;
+                osc2.frequency.value = freq * 1.414;
+                gain1.gain.setValueAtTime(0.5, ctx.currentTime);
+                gain1.gain.setValueAtTime(0, ctx.currentTime + dur * 0.4);
+                gain2.gain.setValueAtTime(0, ctx.currentTime);
+                gain2.gain.setValueAtTime(0.5, ctx.currentTime + dur * 0.5);
+                gain2.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+                osc1.connect(gain1).connect(ctx.destination);
+                osc2.connect(gain2).connect(ctx.destination);
+                osc1.start();
+                osc2.start();
+                osc1.stop(ctx.currentTime + dur);
+                osc2.stop(ctx.currentTime + dur);
+            },
+            return: (ctx, freq, dur) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.frequency.setValueAtTime(freq * 1.5, ctx.currentTime);
+                osc.frequency.setValueAtTime(freq * 1.25, ctx.currentTime + dur * 0.5);
+                osc.frequency.setValueAtTime(freq, ctx.currentTime + dur * 0.7);
+                gain.gain.setValueAtTime(0.5, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + dur);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + dur);
+            },
+            dwell: (ctx, freq, dur) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const lfo = ctx.createOscillator();
+                const lfoGain = ctx.createGain();
+                osc.frequency.value = freq;
+                lfo.frequency.value = 5;
+                lfoGain.gain.value = 3;
+                lfo.connect(lfoGain).connect(osc.frequency);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + dur * 0.3);
+                gain.gain.setValueAtTime(0.4, ctx.currentTime + dur * 0.7);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start();
+                lfo.start();
+                osc.stop(ctx.currentTime + dur);
+                lfo.stop(ctx.currentTime + dur);
+            },
+            oscillation: (ctx, freq, dur) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const tremolo = ctx.createOscillator();
+                const tremoloGain = ctx.createGain();
+                osc.frequency.value = freq;
+                tremolo.frequency.value = 12;
+                tremoloGain.gain.value = 0.5;
+                tremolo.connect(tremoloGain).connect(gain.gain);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start();
+                tremolo.start();
+                osc.stop(ctx.currentTime + dur);
+                tremolo.stop(ctx.currentTime + dur);
+            },
+            recovery: (ctx, freq, dur) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.frequency.setValueAtTime(freq * 0.9, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq, ctx.currentTime + dur);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.5, ctx.currentTime + dur * 0.8);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + dur);
+            },
+            novelty: (ctx, freq, dur) => {
+                const osc = ctx.createOscillator();
+                const modOsc = ctx.createOscillator();
+                const modGain = ctx.createGain();
+                const gain = ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.value = freq;
+                modOsc.frequency.value = 73;
+                modGain.gain.value = freq * 0.3;
+                modOsc.connect(modGain).connect(osc.frequency);
+                gain.gain.setValueAtTime(0.4, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+                osc.connect(gain).connect(ctx.destination);
+                osc.start();
+                modOsc.start();
+                osc.stop(ctx.currentTime + dur);
+                modOsc.stop(ctx.currentTime + dur);
+            },
+            'place-shift': (ctx, freq, dur) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const panner = ctx.createStereoPanner();
+                osc.frequency.setValueAtTime(freq * 1.15, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(freq * 0.85, ctx.currentTime + dur);
+                panner.pan.setValueAtTime(-1, ctx.currentTime);
+                panner.pan.linearRampToValueAtTime(1, ctx.currentTime + dur);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.5, ctx.currentTime + dur * 0.5);
+                gain.gain.linearRampToValueAtTime(0, ctx.currentTime + dur);
+                osc.connect(gain).connect(panner).connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + dur);
+            },
+            echo: (ctx, freq, dur) => {
+                const delays = [0, 0.15, 0.3, 0.45];
+                delays.forEach((delay, i) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.frequency.value = freq;
+                    const amp = 0.4 * Math.pow(0.5, i);
+                    gain.gain.setValueAtTime(amp, ctx.currentTime + delay);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur * 0.6);
+                    osc.connect(gain).connect(ctx.destination);
+                    osc.start(ctx.currentTime + delay);
+                    osc.stop(ctx.currentTime + delay + dur * 0.6);
+                });
+            }
+        };
+        
+        function playSigil(sigil) {
+            const ctx = getAudioContext();
+            const generator = generators[sigil.name];
+            if (generator) {
+                generator(ctx, sigil.freq, sigil.duration);
+            }
+            
+            // Visual feedback
+            const card = document.querySelector(`[data-name="${sigil.name}"]`);
+            card.classList.add('playing');
+            setTimeout(() => card.classList.remove('playing'), sigil.duration * 1000);
+        }
+        
+        function addToSequence(char) {
+            sequenceChars.push(char);
+            document.getElementById('sequence').value = sequenceChars.join(' ');
+        }
+        
+        function clearSequence() {
+            sequenceChars = [];
+            document.getElementById('sequence').value = '';
+        }
+        
+        async function playSequence() {
+            for (const char of sequenceChars) {
+                const sigil = sigils.find(s => s.char === char);
+                if (sigil) {
+                    playSigil(sigil);
+                    await new Promise(r => setTimeout(r, sigil.duration * 1000 + 100));
+                }
+            }
+        }
+        
+        // Build UI
+        const grid = document.getElementById('sigils-grid');
+        const quickAdd = document.getElementById('quick-add');
+        
+        sigils.forEach(sigil => {
+            const card = document.createElement('div');
+            card.className = 'sigil-card';
+            card.dataset.name = sigil.name;
+            card.innerHTML = `
+                <span class="sigil-char">${sigil.char}</span>
+                <div class="sigil-name">${sigil.name}</div>
+                <div class="sigil-desc">${sigil.desc}</div>
+                <div class="sigil-sound-desc">${sigil.sound}</div>
+                <div class="visualizer"></div>
+            `;
+            card.onclick = () => {
+                playSigil(sigil);
+                addToSequence(sigil.char);
+            };
+            grid.appendChild(card);
+            
+            const btn = document.createElement('button');
+            btn.textContent = sigil.char;
+            btn.onclick = () => addToSequence(sigil.char);
+            quickAdd.appendChild(btn);
+        });
+    </script>
+</body>
+</html>
